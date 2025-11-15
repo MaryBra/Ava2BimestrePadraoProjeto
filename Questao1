@@ -1,0 +1,115 @@
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * PADRÃO STRATEGY APLICADO
+ * Justificativa: Necessidade de trocar algoritmos de risco dinamicamente em tempo de execução
+ * Princípios SOLID: SRP, OCP, LSP, DIP
+ */
+
+// Contexto complexo compartilhado entre estratégias
+class ContextoRisco {
+    private Map<String, Object> parametros = new HashMap<>();
+    
+    public void adicionarParametro(String chave, Object valor) {
+        parametros.put(chave, valor);
+    }
+    
+    public Object obterParametro(String chave) {
+        return parametros.get(chave);
+    }
+    
+    public Map<String, Object> getParametros() {
+        return new HashMap<>(parametros);
+    }
+}
+
+// Interface Strategy - Define contrato para todos os algoritmos
+interface AlgoritmoRisco {
+    String calcularMetrica(ContextoRisco contexto);
+}
+
+// Implementações concretas dos algoritmos
+class ValueAtRisk implements AlgoritmoRisco {
+    @Override
+    public String calcularMetrica(ContextoRisco contexto) {
+        double confianca = (Double) contexto.obterParametro("nivelConfianca");
+        double var = Math.random() * 10000;
+        return String.format("Value at Risk: $%.2f - Confiança: %.1f%%", var, confianca * 100);
+    }
+}
+
+class ExpectedShortfall implements AlgoritmoRisco {
+    @Override
+    public String calcularMetrica(ContextoRisco contexto) {
+        double perdaEsperada = Math.random() * 5000;
+        double probabilidade = Math.random();
+        return String.format("Expected Shortfall: Perda esperada $%.2f - Probabilidade: %.1f%%", 
+                           perdaEsperada, probabilidade * 100);
+    }
+}
+
+class StressTesting implements AlgoritmoRisco {
+    @Override
+    public String calcularMetrica(ContextoRisco contexto) {
+        String cenario = (String) contexto.obterParametro("cenarioStress");
+        double impacto = Math.random() * 20000;
+        return String.format("Stress Testing - Cenário: %s - Impacto: $%.2f", cenario, impacto);
+    }
+}
+
+// Cliente que utiliza os algoritmos - segue DIP
+class ProcessadorRisco {
+    private AlgoritmoRisco algoritmo;
+    private ContextoRisco contexto;
+    
+    public ProcessadorRisco(ContextoRisco contexto) {
+        this.contexto = contexto;
+    }
+    
+    // Permite troca dinâmica em tempo de execução
+    public void setAlgoritmo(AlgoritmoRisco algoritmo) {
+        this.algoritmo = algoritmo;
+    }
+    
+    public String executarCalculo() {
+        if (algoritmo == null) {
+            throw new IllegalStateException("Algoritmo não definido");
+        }
+        return algoritmo.calcularMetrica(contexto);
+    }
+}
+
+// Demonstração do uso
+public class Questao1 {
+    public static void main(String[] args) {
+        // Configura contexto complexo
+        ContextoRisco contexto = new ContextoRisco();
+        contexto.adicionarParametro("nivelConfianca", 0.95);
+        contexto.adicionarParametro("cenarioStress", "Crise do Mercado Imobiliário");
+        contexto.adicionarParametro("horizonteTemporal", 10);
+        
+        ProcessadorRisco processador = new ProcessadorRisco(contexto);
+        
+        // Demonstra troca dinâmica de algoritmos
+        System.out.println("=== DEMONSTRAÇÃO STRATEGY PATTERN ===");
+        
+        processador.setAlgoritmo(new ValueAtRisk());
+        System.out.println("1. " + processador.executarCalculo());
+        
+        processador.setAlgoritmo(new ExpectedShortfall());
+        System.out.println("2. " + processador.executarCalculo());
+        
+        processador.setAlgoritmo(new StressTesting());
+        System.out.println("3. " + processador.executarCalculo());
+        
+        // Nova estratégia pode ser adicionada sem modificar o código existente (OCP)
+        processador.setAlgoritmo(new AlgoritmoRisco() {
+            @Override
+            public String calcularMetrica(ContextoRisco contexto) {
+                return "Novo algoritmo personalizado - Risco Calculado";
+            }
+        });
+        System.out.println("4. " + processador.executarCalculo());
+    }
+}
